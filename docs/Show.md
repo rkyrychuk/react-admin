@@ -120,6 +120,7 @@ export const PostShow = (props) => (
 
 You may want to display additional information on the side of the resource detail. Use the `aside` prop for that, passing the component of your choice:
 
+{% raw %}
 ```jsx
 const Aside = () => (
     <div style={{ width: 200, margin: '1em' }}>
@@ -135,19 +136,26 @@ const PostShow = props => (
         ...
     </Show>
 ```
+{% endraw %}
 
 The `aside` component receives the same props as the `Show` child component: `basePath`, `record`, `resource`, and `version`. That means you can display secondary details of the current record in the aside component:
 
+{% raw %}
 ```jsx
 const Aside = ({ record }) => (
     <div style={{ width: 200, margin: '1em' }}>
         <Typography variant="title">Post details</Typography>
-        <Typography variant="body1">
-            Creation date: {record.createdAt}
-        </Typography>
+        {record && (
+            <Typography variant="body1">
+                Creation date: {record.createdAt}
+            </Typography>
+        )}
     </div>
 );
 ```
+{% endraw %}
+
+**Tip**: Always test that the `record` is defined before using it, as react-admin starts rendering the UI before the API call is over.
 
 ## The `<ShowGuesser>` component
 
@@ -178,7 +186,7 @@ React-admin provides guessers for the `List` view (`ListGuesser`), the `Edit` vi
 
 The `<SimpleShowLayout>` component receives the `record` as prop from its parent component. It is responsible for rendering the actual view.
 
-The `<SimpleShowLayout>` renders its child components line by line (within `<div>` components).
+The `<SimpleShowLayout>` renders its child components line by line (within `<div>` components) inside a material-ui `<CardContent/>`.
 
 ```jsx
 export const PostShow = (props) => (
@@ -192,28 +200,7 @@ export const PostShow = (props) => (
 );
 ```
 
-It is possible to override its style by specifying the `style` prop, for example:
-
-```jsx
-const styles = {
-    container: {
-        display: 'flex',
-    },
-    item: {
-        marginRight: '1rem',
-    },
-};
-
-export const PostShow = (props) => (
-    <Show {...props}>
-        <SimpleShowLayout style={styles.container}>
-            <TextField source="title" style={styles.item} />
-            <RichTextField source="body" style={styles.item} />
-            <NumberField source="nb_views" style={styles.item} />
-        </SimpleShowLayout>
-    </Show>
-);
-```
+It accepts a `className` prop to let you override the style of the `<CardContent/>`.
 
 ## The `<TabbedShowLayout>` component
 
@@ -257,6 +244,36 @@ export const PostShow = (props) => (
 );
 ```
 {% endraw %}
+
+To style the tabs, the `<Tab>` component accepts two props:
+
+- `className` is passed to the tab *header*
+- `contentClassName` is passed to the tab *content*
+
+### Tabs element
+
+By default, `<TabbedShowLayout>` renders its tabs using `<TabbedShowLayoutTabs>`, an internal react-admin component. You can pass a custom component as the `tabs` prop to override that default. Also, props passed to `<TabbedShowLayoutTabs>` are passed to the material-ui's `<Tabs>` component inside `<TabbedShowLayoutTabs>`. That means you can create a custom `tabs` component without copying several components from the react-admin source.
+
+For instance, to make use of scrollable `<Tabs>`, you can pass a scrollable props to `<TabbedShowLayoutTabs>` and use it in the `tabs` prop from `<TabbedShowLayout>` as follows:
+
+```jsx
+import {
+    Show,
+    TabbedShowLayout,
+    TabbedShowLayoutTabs,
+} from 'react-admin';
+
+const ScrollableTabbedShowLayout = props => (
+    <Show{...props}>
+        <TabbedShowLayout tabs={<TabbedShowLayoutTabs scrollable={true}/>}>
+            ...
+        </TabbedShowLayout>
+    </Show>
+);
+
+export default ScrollableTabbedShowLayout;
+
+```
 
 ## Displaying Fields depending on the user permissions
 

@@ -1,7 +1,7 @@
-import React from 'react';
+import React, { cloneElement, Children } from 'react';
 import PropTypes from 'prop-types';
 import Card from '@material-ui/core/Card';
-import { withStyles } from '@material-ui/core/styles';
+import { withStyles, createStyles } from '@material-ui/core/styles';
 import classnames from 'classnames';
 import { ShowController } from 'ra-core';
 
@@ -9,14 +9,14 @@ import DefaultActions from './ShowActions';
 import TitleForRecord from '../layout/TitleForRecord';
 import CardContentInner from '../layout/CardContentInner';
 
-export const styles = {
+export const styles = createStyles({
     root: {
         display: 'flex',
     },
     card: {
         flex: '1 1 auto',
     },
-};
+});
 
 const sanitizeRestProps = ({
     actions,
@@ -44,69 +44,72 @@ const sanitizeRestProps = ({
     ...rest
 }) => rest;
 
-export const ShowView = ({
-    actions,
-    aside,
-    basePath,
-    children,
-    classes,
-    className,
-    defaultTitle,
-    hasEdit,
-    hasList,
-    isLoading,
-    record,
-    resource,
-    title,
-    version,
-    ...rest
-}) => {
-    if (typeof actions === 'undefined' && hasEdit) {
-        actions = <DefaultActions />;
-    }
-    if (!children) {
-        return null;
-    }
-    return (
-        <div
-            className={classnames('show-page', classes.root, className)}
-            {...sanitizeRestProps(rest)}
-        >
-            <TitleForRecord
-                title={title}
-                record={record}
-                defaultTitle={defaultTitle}
-            />
-            <Card className={classes.card}>
-                {actions && (
-                    <CardContentInner>
-                        {React.cloneElement(actions, {
-                            basePath,
-                            data: record,
-                            hasList,
-                            hasEdit,
+export const ShowView = withStyles(styles)(
+    ({
+        actions,
+        aside,
+        basePath,
+        children,
+        classes,
+        className,
+        defaultTitle,
+        hasEdit,
+        hasList,
+        isLoading,
+        record,
+        resource,
+        title,
+        version,
+        ...rest
+    }) => {
+        if (typeof actions === 'undefined' && hasEdit) {
+            actions = <DefaultActions />;
+        }
+        if (!children) {
+            return null;
+        }
+        return (
+            <div
+                className={classnames('show-page', classes.root, className)}
+                {...sanitizeRestProps(rest)}
+            >
+                <TitleForRecord
+                    title={title}
+                    record={record}
+                    defaultTitle={defaultTitle}
+                />
+                <Card className={classes.card}>
+                    {actions && (
+                        <CardContentInner>
+                            {cloneElement(actions, {
+                                basePath,
+                                data: record,
+                                hasList,
+                                hasEdit,
+                                resource,
+                                ...actions.props,
+                            })}
+                        </CardContentInner>
+                    )}
+                    {record &&
+                        cloneElement(Children.only(children), {
                             resource,
+                            basePath,
+                            record,
+                            version,
                         })}
-                    </CardContentInner>
-                )}
-                {record &&
-                    React.cloneElement(children, {
+                </Card>
+                {aside &&
+                    cloneElement(aside, {
                         resource,
                         basePath,
                         record,
                         version,
                     })}
-            </Card>
-            {aside &&
-                React.cloneElement(aside, {
-                    resource,
-                    basePath,
-                    record,
-                    version,
-                })}
-        </div>
-    );
-};
+            </div>
+        );
+    }
+);
 
 ShowView.propTypes = {
     actions: PropTypes.element,
@@ -171,7 +174,7 @@ ShowView.defaultProps = {
  *     );
  *     export default App;
  */
-export const Show = props => (
+const Show = props => (
     <ShowController {...props}>
         {controllerProps => <ShowView {...props} {...controllerProps} />}
     </ShowController>
@@ -181,7 +184,7 @@ Show.propTypes = {
     actions: PropTypes.element,
     aside: PropTypes.node,
     children: PropTypes.element,
-    classes: PropTypes.node,
+    classes: PropTypes.object,
     className: PropTypes.string,
     hasCreate: PropTypes.bool,
     hasEdit: PropTypes.bool,
@@ -192,4 +195,4 @@ Show.propTypes = {
     title: PropTypes.any,
 };
 
-export default withStyles(styles)(Show);
+export default Show;

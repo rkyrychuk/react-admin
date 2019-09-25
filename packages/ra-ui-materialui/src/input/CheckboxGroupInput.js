@@ -7,7 +7,7 @@ import FormGroup from '@material-ui/core/FormGroup';
 import FormControlLabel from '@material-ui/core/FormControlLabel';
 import FormHelperText from '@material-ui/core/FormHelperText';
 import Checkbox from '@material-ui/core/Checkbox';
-import { withStyles } from '@material-ui/core/styles';
+import { withStyles, createStyles } from '@material-ui/core/styles';
 import compose from 'recompose/compose';
 import { addField, translate, FieldTitle } from 'ra-core';
 
@@ -15,13 +15,19 @@ import defaultSanitizeRestProps from './sanitizeRestProps';
 const sanitizeRestProps = ({ setFilter, setPagination, setSort, ...rest }) =>
     defaultSanitizeRestProps(rest);
 
-const styles = theme => ({
-    root: {},
-    label: {
-        transform: 'translate(0, 5px) scale(0.75)',
-        transformOrigin: `top ${theme.direction === 'ltr' ? 'left' : 'right'}`,
-    },
-});
+const styles = theme =>
+    createStyles({
+        root: {},
+        label: {
+            transform: 'translate(0, 1.5px) scale(0.75)',
+            transformOrigin: `top ${
+                theme.direction === 'ltr' ? 'left' : 'right'
+            }`,
+        },
+        checkbox: {
+            height: 32,
+        },
+    });
 
 /**
  * An Input component for a checkbox group, using an array of objects for the options
@@ -99,9 +105,9 @@ export class CheckboxGroupInput extends Component {
             newValue = event.target.value;
         }
         if (isChecked) {
-            onChange([...value, ...[newValue]]);
+            onChange([...(value || []), ...[newValue]]);
         } else {
-            onChange(value.filter(v => v != newValue));
+            onChange(value.filter(v => v != newValue)); // eslint-disable-line eqeqeq
         }
     };
 
@@ -114,19 +120,20 @@ export class CheckboxGroupInput extends Component {
             options,
             translate,
             translateChoice,
+            classes,
         } = this.props;
-        const choiceName = React.isValidElement(optionText) // eslint-disable-line no-nested-ternary
+        const choiceName = React.isValidElement(optionText)
             ? React.cloneElement(optionText, { record: choice })
             : typeof optionText === 'function'
-                ? optionText(choice)
-                : get(choice, optionText);
+            ? optionText(choice)
+            : get(choice, optionText);
         return (
             <FormControlLabel
                 htmlFor={`${id}_${get(choice, optionValue)}`}
                 key={get(choice, optionValue)}
                 checked={
                     value
-                        ? value.find(v => v == get(choice, optionValue)) !==
+                        ? value.find(v => v == get(choice, optionValue)) !== // eslint-disable-line eqeqeq
                           undefined
                         : false
                 }
@@ -136,6 +143,7 @@ export class CheckboxGroupInput extends Component {
                     <Checkbox
                         id={`${id}_${get(choice, optionValue)}`}
                         color="primary"
+                        className={classes.checkbox}
                         {...options}
                     />
                 }
@@ -185,8 +193,9 @@ export class CheckboxGroupInput extends Component {
                     />
                 </FormLabel>
                 <FormGroup row>{choices.map(this.renderCheckbox)}</FormGroup>
-                {touched &&
-                    error && <FormHelperText error>{error}</FormHelperText>}
+                {touched && error && (
+                    <FormHelperText error>{error}</FormHelperText>
+                )}
                 {helperText && <FormHelperText>{helperText}</FormHelperText>}
             </FormControl>
         );
@@ -219,6 +228,7 @@ CheckboxGroupInput.propTypes = {
 
 CheckboxGroupInput.defaultProps = {
     choices: [],
+    classes: {},
     options: {},
     optionText: 'name',
     optionValue: 'id',

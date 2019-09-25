@@ -53,7 +53,10 @@ describe('<AutocompleteArrayInput />', () => {
     it('should use optionText with a string value as text identifier', () => {
         const wrapper = shallow(
             <AutocompleteArrayInput {...defaultProps} optionText="foobar" />,
-            { context, childContextTypes }
+            {
+                context,
+                childContextTypes,
+            }
         );
 
         // This is necesary because we use the material-ui Popper element which does not includes
@@ -162,6 +165,26 @@ describe('<AutocompleteArrayInput />', () => {
 
         const MenuItem = render(menuItem);
         assert.equal(MenuItem.text(), 'Male');
+    });
+
+    it('should respect shouldRenderSuggestions over default if passed in', () => {
+        const wrapper = mount(
+            <AutocompleteArrayInput
+                {...defaultProps}
+                input={{ value: ['M'], onChange: () => {} }}
+                choices={[{ id: 'M', name: 'Male' }]}
+                shouldRenderSuggestions={v => v.length > 2}
+            />,
+            { context, childContextTypes }
+        );
+        wrapper.find('input').simulate('focus');
+        wrapper.find('input').simulate('change', { target: { value: 'Ma' } });
+        expect(wrapper.state('suggestions')).toHaveLength(1);
+        expect(wrapper.find('ListItem')).toHaveLength(0);
+
+        wrapper.find('input').simulate('change', { target: { value: 'Mal' } });
+        expect(wrapper.state('suggestions')).toHaveLength(1);
+        expect(wrapper.find('ListItem')).toHaveLength(1);
     });
 
     describe('Fix issue #1410', () => {
@@ -310,7 +333,10 @@ describe('<AutocompleteArrayInput />', () => {
                     {...defaultProps}
                     input={{ value: [], onChange }}
                 />,
-                { context, childContextTypes }
+                {
+                    context,
+                    childContextTypes,
+                }
             );
             wrapper.setProps({
                 choices: [{ id: 'M', name: 'Male' }],
@@ -533,5 +559,28 @@ describe('<AutocompleteArrayInput />', () => {
                 resolve();
             }, 250);
         });
+    });
+
+    it('passes options.suggestionsContainerProps to the suggestions container', () => {
+        const onChange = jest.fn();
+
+        const wrapper = mount(
+            <AutocompleteArrayInput
+                {...defaultProps}
+                input={{ value: [], onChange }}
+                choices={[
+                    { id: 1, name: 'ab' },
+                    { id: 2, name: 'abc' },
+                    { id: 3, name: '123' },
+                ]}
+                options={{
+                    suggestionsContainerProps: {
+                        disablePortal: true,
+                    },
+                }}
+            />,
+            { context, childContextTypes }
+        );
+        expect(wrapper.find('Popper').props().disablePortal).toEqual(true);
     });
 });

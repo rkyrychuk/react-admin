@@ -20,6 +20,7 @@ Here are all the props accepted by the `<Create>` and `<Edit>` components:
 * [`title`](#page-title)
 * [`actions`](#actions)
 * [`aside`](#aside-component)
+* [`undoable`](#undoable) (`<Edit>` only)
 
 Here is the minimal code necessary to display a form to create and edit comments:
 
@@ -139,6 +140,7 @@ export const PostEdit = (props) => (
 
 You may want to display additional information on the side of the form. Use the `aside` prop for that, passing the component of your choice:
 
+{% raw %}
 ```jsx
 const Aside = () => (
     <div style={{ width: 200, margin: '1em' }}>
@@ -154,18 +156,72 @@ const PostEdit = props => (
         ...
     </Edit>
 ```
+{% endraw %}
 
 The `aside` component receives the same props as the `Edit` or `Create` child component: `basePath`, `record`, `resource`, and `version`. That means you can display non-editable details of the current record in the aside component:
 
+{% raw %}
 ```jsx
 const Aside = ({ record }) => (
     <div style={{ width: 200, margin: '1em' }}>
         <Typography variant="title">Post details</Typography>
-        <Typography variant="body1">
-            Creation date: {record.createdAt}
-        </Typography>
+        {record && (
+            <Typography variant="body1">
+                Creation date: {record.createdAt}
+            </Typography>
+        )}
     </div>
 );
+```
+{% endraw %}
+
+**Tip**: Always test that the `record` is defined before using it, as react-admin starts rendering the UI before the API call is over.
+
+### Undoable
+
+By default, the Save and Delete actions are undoable, i.e. react-admin only sends the related request to the data provider after a short delay, during which the user can cancel the action. This is part of the "optimistic rendering" strategy of react-admin ; it makes the user interactions more reactive.
+
+You can disable this behavior by setting `undoable={false}`. With that setting, clicking on the Delete button displays a confirmation dialog. Both the Save and the Delete actions become blocking, and delay the refresh of the screen until the data provider responds.
+
+```jsx
+const PostEdit = props => (
+    <Edit undoable={false} {...props}>
+        ...
+    </Edit>
+```
+
+**Tip**: If you want a confirmation dialog for the Delete button but don't mind undoable Edits, then pass a [custom toolbar](#toolbar) to the form, as follows:
+
+```jsx
+import {
+    Toolbar,
+    SaveButton,
+    DeleteButton,
+    Edit,
+    SimpleForm,
+} from 'react-admin';
+import { withStyles } from '@material-ui/core';
+
+const toolbarStyles = {
+    toolbar: {
+        display: 'flex',
+        justifyContent: 'space-between',
+    },
+};
+
+const CustomToolbar = withStyles(toolbarStyles)(props => (
+    <Toolbar {...props}>
+        <SaveButton />
+        <DeleteButton undoable={false} />
+    </Toolbar>
+));
+
+const PostEdit = props => (
+    <Edit {...props}>
+        <SimpleForm toolbar={<CustomToolbar />}>
+            ...
+        </SimpleForm>
+    </Edit>
 ```
 
 ## Prefilling a `<Create>` Record
@@ -188,6 +244,8 @@ const PostList = props => (
 ```
 
 Alternately, you may need to prepopulate a record based on a *related* record. For instance, in a `PostList` component, you may want to display a button to create a comment related to the current post. Clicking on that button would lead to a `CommentCreate` page where the `post_id` is preset to the id of the Post.
+
+**Note**  `<CloneButton>` is designed to be used in an edit view `<Actions>` component, not inside a `<Toolbar>`. The `Toolbar` is basically for submitting the form, not for going to another resource.
 
 By default, the `<Create>` view starts with an empty `record`. However, if the `location` object (injected by [react-router](https://reacttraining.com/react-router/web/api/location)) contains a `record` in its `state`, the `<Create>` view uses that `record` instead of the empty object. That's how the `<CloneButton>` works behind the hood.
 
@@ -364,6 +422,11 @@ export const PostEdit = (props) => (
 ```
 {% endraw %}
 
+To style the tabs, the `<FormTab>` component accepts two props:
+
+- `className` is passed to the tab *header*
+- `contentClassName` is passed to the tab *content*
+
 ## Default Values
 
 To define default values, you can add a `defaultValue` prop to form components (`<SimpleForm>`, `<Tabbedform>`, etc.), or add a `defaultValue` to individual input components. Let's see each of these options.
@@ -440,9 +503,68 @@ export const UserCreate = (props) => (
 
 **Tip**: The props you pass to `<SimpleForm>` and `<TabbedForm>` end up as `reduxForm()` parameters. This means that, in addition to `validate`, you can also pass `warn` or `asyncValidate` functions. Read the [`reduxForm()` documentation](http://redux-form.com/6.5.0/docs/api/ReduxForm.md/) for details.
 
-### Per Input Validation: Function Validator
+### Per Input Validation: Built-in Field Validators
 
-Alternatively, you can specify a `validate` prop directly in `<Input>` components, taking either a function, or an array of functions. These functions should return `undefined` when there is no error, or an error string.
+Alternatively, you can specify a `validate` prop directly in `<Input>` components, taking either a function, or an array of functions. React-admin already bundles a few validator functions, that you can just require, and use as input-level validators:
+
+* `required(message)` if the field is mandatory,
+* `minValue(min, message)` to specify a minimum value for integers,
+* `maxValue(max, message)` to specify a maximum value for integers,
+* `minLength(min, message)` to specify a minimum length for strings,
+* `maxLength(max, message)` to specify a maximum length for strings,
+* `number(message)` to check that the input is a valid number,
+* `email(message)` to check that the input is a valid email address,
+* `regex(pattern, message)` to validate that the input matches a regex,
+* `choices(list, message)` to validate that the input is within a given list,
+
+Example usage:
+
+```jsx
+import {
+    required,
+    minLength,
+    maxLength,
+    minValue,
+    maxValue,
+    number,
+    regex,
+    email,
+    choices
+} from 'react-admin';
+
+const validateFirstName = [required(), minLength(2), maxLength(15)];
+const validateEmail = email();
+const validateAge = [number(), minValue(18)];
+const validateZipCode = regex(/^\d{5}$/, 'Must be a valid Zip Code');
+const validateSex = choices(['m', 'f'], 'Must be Male or Female');
+
+export const UserCreate = (props) => (
+    <Create {...props}>
+        <SimpleForm>
+            <TextInput label="First Name" source="firstName" validate={validateFirstName} />
+            <TextInput label="Email" source="email" validate={validateEmail} />
+            <TextInput label="Age" source="age" validate={validateAge}/>
+            <TextInput label="Zip Code" source="zip" validate={validateZipCode}/>
+            <SelectInput label="Sex" source="sex" choices={[
+                { id: 'm', name: 'Male' },
+                { id: 'f', name: 'Female' },
+            ]} validate={validateSex}/>
+        </SimpleForm>
+    </Create>
+);
+```
+
+**Tip**: If you pass a function as a message, react-admin calls this function with `{ args, value, values,translate, ...props }` as argument. For instance:
+
+```jsx
+const message = ({ translate }) => translate('myroot.validation.email_invalid');
+const validateEmail = email(message);
+```
+
+### Per Input Validation: Custom Function Validator
+
+You can also define your own validator functions. These functions should return `undefined` when there is no error, or an error string.
+
 
 ```jsx
 const required = (message = 'Required') =>
@@ -512,64 +634,6 @@ export const ProductEdit = ({ ...props }) => (
 **Tip**: The props of your Input components are passed to a redux-form `<Field>` component. So in addition to `validate`, you can also use `warn`.
 
 **Tip**: You can use *both* Form validation and input validation.
-
-### Built-in Field Validators
-
-React-admin already bundles a few validator functions, that you can just require, and use as input-level validators:
-
-* `required(message)` if the field is mandatory,
-* `minValue(min, message)` to specify a minimum value for integers,
-* `maxValue(max, message)` to specify a maximum value for integers,
-* `minLength(min, message)` to specify a minimum length for strings,
-* `maxLength(max, message)` to specify a maximum length for strings,
-* `number(message)` to check that the input is a valid number,
-* `email(message)` to check that the input is a valid email address,
-* `regex(pattern, message)` to validate that the input matches a regex,
-* `choices(list, message)` to validate that the input is within a given list,
-
-Example usage:
-
-```jsx
-import {
-    required,
-    minLength,
-    maxLength,
-    minValue,
-    maxValue,
-    number,
-    regex,
-    email,
-    choices
-} from 'react-admin';
-
-const validateFirstName = [required(), minLength(2), maxLength(15)];
-const validateEmail = email();
-const validateAge = [number(), minValue(18)];
-const validateZipCode = regex(/^\d{5}$/, 'Must be a valid Zip Code');
-const validateSex = choices(['m', 'f'], 'Must be Male or Female');
-
-export const UserCreate = (props) => (
-    <Create {...props}>
-        <SimpleForm>
-            <TextInput label="First Name" source="firstName" validate={validateFirstName} />
-            <TextInput label="Email" source="email" validate={validateEmail} />
-            <TextInput label="Age" source="age" validate={validateAge}/>
-            <TextInput label="Zip Code" source="zip" validate={validateZipCode}/>
-            <SelectInput label="Sex" source="sex" choices={[
-                { id: 'm', name: 'Male' },
-                { id: 'f', name: 'Female' },
-            ]} validate={validateSex}/>
-        </SimpleForm>
-    </Create>
-);
-```
-
-**Tip**: If you pass a function as a message, react-admin calls this function with `{ args, value, values,translate, ...props }` as argument. For instance:
-
-```jsx
-const message = ({ translate }) => translate('myroot.validation.email_invalid');
-const validateEmail = email(message);
-```
 
 ## Submit On Enter
 

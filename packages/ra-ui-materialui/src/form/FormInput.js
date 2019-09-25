@@ -1,15 +1,16 @@
 import React from 'react';
 import PropTypes from 'prop-types';
 import classnames from 'classnames';
-import { withStyles } from '@material-ui/core/styles';
+import { withStyles, createStyles } from '@material-ui/core/styles';
 
 import Labeled from '../input/Labeled';
 
 const sanitizeRestProps = ({ basePath, record, ...rest }) => rest;
 
-const styles = theme => ({
-    input: { width: theme.spacing.unit * 32 },
-});
+const styles = theme =>
+    createStyles({
+        input: { width: theme.spacing.unit * 32 },
+    });
 
 export const FormInput = ({ classes, input, ...rest }) =>
     input ? (

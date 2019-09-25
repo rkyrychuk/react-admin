@@ -1,21 +1,21 @@
-import React from 'react';
+import React, { Children, cloneElement } from 'react';
 import PropTypes from 'prop-types';
 import Card from '@material-ui/core/Card';
-import { withStyles } from '@material-ui/core/styles';
+import { withStyles, createStyles } from '@material-ui/core/styles';
 import classnames from 'classnames';
 import { CreateController } from 'ra-core';
 
 import TitleForRecord from '../layout/TitleForRecord';
 import CardContentInner from '../layout/CardContentInner';
 
-const styles = {
+const styles = createStyles({
     root: {
         display: 'flex',
     },
     card: {
         flex: '1 1 auto',
     },
-};
+});
 
 const sanitizeRestProps = ({
     actions,
@@ -39,61 +39,64 @@ const sanitizeRestProps = ({
     ...rest
 }) => rest;
 
-export const CreateView = ({
-    actions,
-    aside,
-    basePath,
-    children,
-    classes,
-    className,
-    defaultTitle,
-    hasList,
-    hasShow,
-    record = {},
-    redirect,
-    resource,
-    save,
-    title,
-    ...rest
-}) => (
-    <div
-        className={classnames('create-page', classes.root, className)}
-        {...sanitizeRestProps(rest)}
-    >
-        <TitleForRecord
-            title={title}
-            record={record}
-            defaultTitle={defaultTitle}
-        />
-        <Card className={classes.card}>
-            {actions && (
-                <CardContentInner>
-                    {React.cloneElement(actions, {
-                        basePath,
-                        resource,
-                        hasList,
-                    })}
-                </CardContentInner>
-            )}
-            {React.cloneElement(children, {
-                basePath,
-                record,
-                redirect:
-                    typeof children.props.redirect === 'undefined'
-                        ? redirect
-                        : children.props.redirect,
-                resource,
-                save,
-            })}
-        </Card>
-        {aside &&
-            React.cloneElement(aside, {
-                basePath,
-                record,
-                resource,
-                save,
-            })}
-    </div>
+export const CreateView = withStyles(styles)(
+    ({
+        actions,
+        aside,
+        basePath,
+        children,
+        classes,
+        className,
+        defaultTitle,
+        hasList,
+        hasShow,
+        record = {},
+        redirect,
+        resource,
+        save,
+        title,
+        ...rest
+    }) => (
+        <div
+            className={classnames('create-page', classes.root, className)}
+            {...sanitizeRestProps(rest)}
+        >
+            <TitleForRecord
+                title={title}
+                record={record}
+                defaultTitle={defaultTitle}
+            />
+            <Card className={classes.card}>
+                {actions && (
+                    <CardContentInner>
+                        {cloneElement(actions, {
+                            basePath,
+                            resource,
+                            hasList,
+                            ...actions.props,
+                        })}
+                    </CardContentInner>
+                )}
+                {cloneElement(Children.only(children), {
+                    basePath,
+                    record,
+                    redirect:
+                        typeof children.props.redirect === 'undefined'
+                            ? redirect
+                            : children.props.redirect,
+                    resource,
+                    save,
+                })}
+            </Card>
+            {aside &&
+                cloneElement(aside, {
+                    basePath,
+                    record,
+                    resource,
+                    save,
+                })}
+        </div>
+    )
 );
 
 CreateView.propTypes = {
@@ -158,7 +161,7 @@ CreateView.defaultProps = {
  *     );
  *     export default App;
  */
-export const Create = props => (
+const Create = props => (
     <CreateController {...props}>
         {controllerProps => <CreateView {...props} {...controllerProps} />}
     </CreateController>
@@ -179,4 +182,4 @@ Create.propTypes = {
     hasList: PropTypes.bool,
 };
 
-export default withStyles(styles)(Create);
+export default Create;
